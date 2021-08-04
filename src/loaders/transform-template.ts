@@ -72,7 +72,7 @@ function TransformTemplate(
           m.forEach((match, groupIndex) => {
             if (groupIndex === 1) {
               transformedCSS = `<style${meta}>\n{\`${service.transformCSS(match, this.resource)}\n\`}</style>`
-              debug.loader('jsx transformed', transformedCSS)
+              debug.loader('jsx transformed', match, transformedCSS)
             }
           })
         }
@@ -81,13 +81,17 @@ function TransformTemplate(
       return `<style${meta}>\n${service.transformCSS(css, this.resource)}\n</style>`
     })
     debug.loader('Transformed template ', this.resource)
+    debug.loader('templateWithTransformedCSS', templateWithTransformedCSS)
     const transformed = service.transformGroups(templateWithTransformedCSS)
     if (transformed)
       output = transformed.code
+    else
+      output = templateWithTransformedCSS
   }
   catch (e) {
     this.emitWarning(`[Windi CSS] Failed to transform groups and css for template: ${this.resource}.`)
   }
+  debug.loader('output', output)
   return output
 }
 
