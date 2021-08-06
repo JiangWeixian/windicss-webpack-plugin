@@ -49,18 +49,16 @@ function TransformTemplate(
 
   let output = source
   try {
-    const templateWithTransformedCSS = source.replace(/<style(.*?)>(.*)<\/style>/gms, (match, meta, css) => {
+    const templateWithTransformedCSS = source.replace(/styled\..+`(.*)`/gms, (match, css) => {
       // if there's no windi code going on then we shouldn't transform anything
       const hasWindiApply = match.includes('@apply')
-      // windi does not support certain types of css langs
-      const isUnsupportedBlock = meta.includes('sass') || meta.includes('stylus') || meta.includes('less')
       // bail out, return the original match
-      if (!hasWindiApply || isUnsupportedBlock) {
+      if (!hasWindiApply) {
         debug.loader('Template has unsupported block, skipping resource', this.resource)
         return match
       }
       // for jsx styles we need to replace the contents of template strings
-      if (/{`(.*)`}/gms.test(css)) {
+      if (/(.*)@apply([^`]*)/gm.test(css)) {
         let m, transformedCSS
         const jsxMatcher = /{`(.*)`}/gms
         while ((m = jsxMatcher.exec(css)) !== null) {
@@ -71,6 +69,7 @@ function TransformTemplate(
           // The result can be accessed through the `m`-variable.
           m.forEach((match, groupIndex) => {
             if (groupIndex === 1) {
+              debug.loader('match', match, this.resource)
               transformedCSS = `<style${meta}>\n{\`${service.transformCSS(match, this.resource)}\n\`}</style>`
               debug.loader('jsx transformed', transformedCSS)
             }
@@ -86,6 +85,44 @@ function TransformTemplate(
       output = transformed.code
     else
       output = templateWithTransformedCSS
+    // const templateWithTransformedCSS = source.replace(/<style(.*?)>(.*)<\/style>/gms, (match, meta, css) => {
+    //   // if there's no windi code going on then we shouldn't transform anything
+    //   const hasWindiApply = match.includes('@apply')
+    //   // windi does not support certain types of css langs
+    //   const isUnsupportedBlock = meta.includes('sass') || meta.includes('stylus') || meta.includes('less')
+    //   // bail out, return the original match
+    //   if (!hasWindiApply || isUnsupportedBlock) {
+    //     debug.loader('Template has unsupported block, skipping resource', this.resource)
+    //     return match
+    //   }
+    //   // for jsx styles we need to replace the contents of template strings
+    //   if (/{`(.*)`}/gms.test(css)) {
+    //     let m, transformedCSS
+    //     const jsxMatcher = /{`(.*)`}/gms
+    //     while ((m = jsxMatcher.exec(css)) !== null) {
+    //       // This is necessary to avoid infinite loops with zero-width matches
+    //       if (m.index === jsxMatcher.lastIndex)
+    //         jsxMatcher.lastIndex++
+
+    //       // The result can be accessed through the `m`-variable.
+    //       m.forEach((match, groupIndex) => {
+    //         if (groupIndex === 1) {
+    //           debug.loader('match', match, this.resource)
+    //           transformedCSS = `<style${meta}>\n{\`${service.transformCSS(match, this.resource)}\n\`}</style>`
+    //           debug.loader('jsx transformed', transformedCSS)
+    //         }
+    //       })
+    //     }
+    //     return transformedCSS ?? match
+    //   }
+    //   return `<style${meta}>\n${service.transformCSS(css, this.resource)}\n</style>`
+    // })
+    // debug.loader('Transformed template ', this.resource)
+    // const transformed = service.transformGroups(templateWithTransformedCSS)
+    // if (transformed)
+    //   output = transformed.code
+    // else
+    //   output = templateWithTransformedCSS
   }
   catch (e) {
     this.emitWarning(`[Windi CSS] Failed to transform groups and css for template: ${this.resource}.`)
@@ -94,3 +131,22 @@ function TransformTemplate(
 }
 
 export default TransformTemplate
+
+// const translate = (source) => {
+//   const templateWithTransformedCSS = source.replace(/styled\..+`([\s\S]*)`/g, (match, css) => {
+//     // if there's no windi code going on then we shouldn't transform anything
+//     const hasWindiApply = match.includes('@apply')
+//     // bail out, return the original match
+//     if (!hasWindiApply) {
+//       return match
+//     }
+//     // for jsx styles we need to replace the contents of template strings
+//     const next = css.replace(/(.*)@apply([^`]*)/gm, (match, pre, applyCss) => {
+//       const parser = new CSSParser(`@apply ${applyCss}`, processor)
+//       return `${pre} ${parser.parse().build()}`
+//     })
+//     return `styled.div\`${next}\``
+//     // return `<style${meta}>\n${service.transformCSS(css, this.resource)}\n</style>`
+//   })
+//   return templateWithTransformedCSS
+// }
